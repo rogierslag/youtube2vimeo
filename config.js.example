@@ -1,0 +1,9 @@
+module.exports = {
+	youtube : {},
+	vimeo : {
+		clientId : '',
+		clientSecret : '',
+		accessToken : ''
+	},
+	importFile: './importIds',
+};

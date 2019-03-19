@@ -1,0 +1,11 @@
+{
+  "name": "youtube2vimeo",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Rogier Slag <rogier.slag@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "vimeo": "^2.1.1",
+    "ytdl-core": "^0.29.1"
+  }
+}
