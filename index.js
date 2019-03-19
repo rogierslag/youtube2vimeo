@@ -13,7 +13,6 @@ const youtubeIdsToImport = fs.readFileSync(config.importFile).toString()
 	.map(e => e.trim())
 	.filter(e => e);
 const mapper = {};
-const errors = [];
 let currentCount = 0;
 
 async function getVideoInfo(url) {
@@ -39,8 +38,9 @@ async function transferSingleVideo(i) {
 			console.log('');
 			console.log('All transfers completed');
 			fs.writeFileSync('./map.json', JSON.stringify(mapper, null, 4));
-			if (errors.length > 0) {
-				console.warn(`${errors.length} error(s) did occur`);
+			const errorCount = Object.values(mapper).filter(e => !e.success).length;
+			if (errorCount > 0) {
+				console.warn(`${errorCount} error(s) did occur`);
 			}
 		}
 		return;
@@ -49,6 +49,7 @@ async function transferSingleVideo(i) {
 
 	const nextId = youtubeIdsToImport.shift();
 	const url = `http://www.youtube.com/watch?v=${nextId}`;
+	const file = `${TMP_DIR}/${nextId}.mp4`;
 
 	console.log(`${id(i)}Now getting video ${nextId}`);
 	try {
@@ -57,28 +58,49 @@ async function transferSingleVideo(i) {
 		const stream = ytdl(url, {
 			filter : 'audioandvideo',
 			quality : 'highest'
-		}).pipe(fs.createWriteStream(`${TMP_DIR}/${nextId}.mp4`));
+		}).pipe(fs.createWriteStream(file));
 		stream.on('finish', () => {
 			console.log(`${id(i)}Got video file for ${nextId}`);
+
 			// File fetched, now upload to vimeo
+			// TODO verify this once we have a token
+			vimeo.upload(
+				file,
+				(uri) => {
+					const id = uri.replace('https://vimeo.com/', '');
+					mapper[nextId] = {
+						success : true,
+						vimeoId : id,
+						title : videoInfo.title,
+						author : videoInfo.author,
+					};
+					console.log(`${id(i)}Uploaded ${nextId} to Vimeo`);
 
-			// TODO perform upload here
+					// After upload, continue with the next item
+					next(i);
+				},
+				() => {
+					// Dont care about progress
+				},
+				(error) => {
+					mapper[nextId] = {
+						success : false,
+						title : videoInfo.title,
+						author : videoInfo.author,
+						reason : 'UPLOAD_ERROR',
+						error
+					};
+					next(i);
+				}
+			)
 
-			mapper[nextId] = {
-				success: true,
-				vimeoId: '?',
-				title: videoInfo.title,
-				author: videoInfo.author,
-			};
-
-			// After upload, continue with the next item
-			next(i);
 		});
-	} catch (e) {
+	} catch (error) {
 		// Video is not available
-		errors.push(nextId);
 		mapper[nextId] = {
-			success: false,
+			success : false,
+			reason : 'NOT_AVAILABLE',
+			error,
 		};
 
 		next(i);
