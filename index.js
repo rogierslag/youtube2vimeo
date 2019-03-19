@@ -87,7 +87,7 @@ async function transferSingleVideo(i) {
 						success : false,
 						title : videoInfo.title,
 						author : videoInfo.author,
-						reason : 'UPLOAD_ERROR',
+						reason : 'DESTINATION_UPLOAD_ERROR',
 						error
 					};
 					next(i);
@@ -99,7 +99,7 @@ async function transferSingleVideo(i) {
 		// Video is not available
 		mapper[nextId] = {
 			success : false,
-			reason : 'NOT_AVAILABLE',
+			reason : 'SOURCE_NOT_AVAILABLE',
 			error,
 		};
 
