@@ -15,6 +15,8 @@ const youtubeIdsToImport = fs.readFileSync(config.importFile).toString()
 const mapper = {};
 let currentCount = 0;
 
+const NO_OP = () => {};
+
 async function getVideoInfo(url) {
 	const videoInfo = await ytdl.getBasicInfo(url);
 	return {
@@ -77,6 +79,10 @@ async function transferSingleVideo(i) {
 					console.log(`${id(i)}Uploaded ${nextId} to Vimeo`);
 
 					// After upload, continue with the next item
+					if(config.keepVideos === false) {
+						// Remove the temporary file
+						fs.unlink(file, NO_OP);
+					}
 					next(i);
 				},
 				() => {
@@ -90,6 +96,10 @@ async function transferSingleVideo(i) {
 						reason : 'DESTINATION_UPLOAD_ERROR',
 						error
 					};
+					if(config.keepVideos === false) {
+						// Remove the temporary file
+						fs.unlink(file, NO_OP);
+					}
 					next(i);
 				}
 			)
