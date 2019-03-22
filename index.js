@@ -15,13 +15,15 @@ const youtubeIdsToImport = fs.readFileSync(config.importFile).toString()
 const mapper = {};
 let currentCount = 0;
 
-const NO_OP = () => {};
+const NO_OP = () => {
+};
 
 async function getVideoInfo(url) {
 	const videoInfo = await ytdl.getBasicInfo(url);
 	return {
 		author : videoInfo.player_response.videoDetails.author,
 		title : videoInfo.player_response.videoDetails.title,
+		description : videoInfo.description,
 	}
 }
 
@@ -64,22 +66,27 @@ async function transferSingleVideo(i) {
 		stream.on('finish', () => {
 			console.log(`${id(i)}Got video file for ${nextId}`);
 
+			const params = {
+				name : videoInfo.title,
+				description : videoInfo.description,
+			};
+
 			// File fetched, now upload to vimeo
-			// TODO verify this once we have a token
 			vimeo.upload(
-				file,
+				file, params,
 				(uri) => {
-					const id = uri.replace('https://vimeo.com/', '');
+					const vimeoId = uri.replace('/videos/', '');
 					mapper[nextId] = {
 						success : true,
-						vimeoId : id,
+						vimeoId,
 						title : videoInfo.title,
 						author : videoInfo.author,
+						description : videoInfo.description,
 					};
 					console.log(`${id(i)}Uploaded ${nextId} to Vimeo`);
 
 					// After upload, continue with the next item
-					if(config.keepVideos === false) {
+					if (config.keepVideos === false) {
 						// Remove the temporary file
 						fs.unlink(file, NO_OP);
 					}
@@ -93,10 +100,11 @@ async function transferSingleVideo(i) {
 						success : false,
 						title : videoInfo.title,
 						author : videoInfo.author,
+						description : videoInfo.description,
 						reason : 'DESTINATION_UPLOAD_ERROR',
 						error
 					};
-					if(config.keepVideos === false) {
+					if (config.keepVideos === false) {
 						// Remove the temporary file
 						fs.unlink(file, NO_OP);
 					}
@@ -129,7 +137,7 @@ async function start() {
 	files.forEach(file => fs.unlinkSync(`${TMP_DIR}/${file}`));
 	console.log('Temporary directory cleared');
 
-	console.log(`${youtubeIdsToImport.length} will be transferred`);
+	console.log(`${youtubeIdsToImport.length} videos will be transferred`);
 	console.log('');
 
 	// Start max "threads"
